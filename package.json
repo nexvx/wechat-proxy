@@ -1,0 +1,16 @@
+{
+  "name": "wechat-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:proxy-server:bundle": "node scripts/build-proxy-server-bundle.mjs",
+    "build:proxy-server:sea": "node scripts/build-proxy-server-sea.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

@@ -106,10 +106,10 @@ function parseMultipartFile(body, contentType) {
 
     // 检查字段名
     const nameMatch = headerStr.match(/name="(.+?)"/)
-    if (nameMatch) {
+      if (nameMatch) {
       const fieldName = nameMatch[1]
       if (fieldName === 'appid' || fieldName === 'appId' || fieldName === 'appName') {
-        appName = content.toString('utf-8').trim()
+        appName = content.toString('utf-8').trim() || 'default'
       } else if (fieldName === 'media' && !filePath) {
         // 提取文件
         const filenameMatch = headerStr.match(/filename="(.+?)"/)
@@ -147,7 +147,7 @@ function sendJson(res, statusCode, data) {
 async function handleAccessToken(cfg, req, res) {
   const body = await collectBody(req)
   const { appid, appName } = JSON.parse(body.toString('utf-8'))
-  const token = await getAccessToken(cfg, appid || appName)
+  const token = await getAccessToken(cfg, appid || appName || 'default')
   sendJson(res, 200, { access_token: token })
 }
 
@@ -187,7 +187,7 @@ async function handleCreateDraft(cfg, req, res) {
     return
   }
 
-  const result = await createDraft(cfg, articles, label || '图文草稿', appid || appName)
+  const result = await createDraft(cfg, articles, label || '图文草稿', appid || appName || 'default')
   sendJson(res, 200, { media_id: result.mediaId })
 }
 

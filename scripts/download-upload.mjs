@@ -4,12 +4,13 @@
  *
  * 用法:
  *   # 单张
- *   node scripts/download-upload.mjs <url> [--no-cache]
+ *   node scripts/download-upload.mjs <url> [--no-cache] [--app <app_name>]
  *
  *   # 批量（JSON 文件，内容为 URL 字符串数组）
- *   node scripts/download-upload.mjs --json <json_file> [--output <result_file>] [--no-cache]
+ *   node scripts/download-upload.mjs --json <json_file> [--output <result_file>] [--no-cache] [--app <app_name>]
  */
 import fs from 'node:fs'
+import { getArg } from '../lib/args.mjs'
 import { loadConfig } from '../lib/config.mjs'
 import { uploadMaterialCached, uploadMaterialBatch, downloadFile, getAccessToken } from '../lib/wechat.mjs'
 const rawArgs = process.argv.slice(2)
@@ -17,14 +18,15 @@ if (!rawArgs.length || rawArgs[0] === '--help' || rawArgs[0] === '-h') {
   process.stdout.write(`
 用法:
   # 单张
-  node scripts/download-upload.mjs <url> [--no-cache]
+  node scripts/download-upload.mjs <url> [--no-cache] [--app <app_name>]
   # 批量（JSON 文件，内容为 URL 字符串数组）
-  node scripts/download-upload.mjs --json <json_file> [--output <result_file>] [--no-cache]
+  node scripts/download-upload.mjs --json <json_file> [--output <result_file>] [--no-cache] [--app <app_name>]
 JSON 文件格式:
   ["https://a.com/1.jpg", "https://b.com/2.png"]
 选项:
   --output <file>  将批量上传结果写入 JSON 文件（可供 replace-images.mjs 使用）
   --no-cache       跳过缓存，强制重新上传
+  --app <app_name> 指定应用名称（默认为 'default'）
 
 单张输出:
   { "success": true, "media_id": "...", "wechat_url": "...", "original_url": "..." }
@@ -32,7 +34,7 @@ JSON 文件格式:
   [{ "original_url": "...", "success": true, "media_id": "...", "wechat_url": "..." }, ...]
 需要配置:
   WECHAT_APP_ID / WECHAT_SECRET 环境变量
-  或 ~/.config/wechat-studio/config.yaml
+  或 ~/.config/wechat-proxy/config.yaml
 `)
   process.exit(0)
 }
@@ -41,6 +43,7 @@ const jsonIdx = rawArgs.indexOf('--json')
 const isBatch = jsonIdx !== -1
 const outputIdx = rawArgs.indexOf('--output')
 const outputFile = outputIdx !== -1 ? rawArgs[outputIdx + 1] : null
+const appName = getArg(rawArgs, ['--app', '-a']) || 'default'
 
 
 const cfg = loadConfig('strict')
@@ -48,7 +51,7 @@ const tmpFiles = []
 try {
   // 特殊模式：获取 Access Token
   if (rawArgs[0] === 'token') {
-    const token = await getAccessToken(cfg)
+    const token = await getAccessToken(cfg, appName)
     process.stdout.write(JSON.stringify({
       success: true,
       access_token: token,
@@ -92,7 +95,7 @@ try {
   const outputPaths = downloaded.map(d => d.tmpPath)
   if (urls.length === 1) {
     // 单张：保持原有输出格式
-    const result = await uploadMaterialCached(cfg, outputPaths[0], { useCache })
+    const result = await uploadMaterialCached(cfg, outputPaths[0], { useCache }, appName)
     process.stdout.write(JSON.stringify({
       success: true,
       media_id: result.mediaId,
@@ -101,7 +104,7 @@ try {
     }, null, 2) + '\n')
   } else {
     // 批量：并发上传，输出数组
-    const results = await uploadMaterialBatch(cfg, outputPaths, { useCache })
+    const results = await uploadMaterialBatch(cfg, outputPaths, { useCache }, appName)
     const output = results.map((r, i) => ({
       original_url: urls[i],
       success: r.success,

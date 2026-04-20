@@ -1,4 +1,4 @@
-# wechat-studio
+# wechat-proxy
 
 微信公众号 API 代理工具：支持 token 获取、图片上传、草稿创建和远程代理。
 
@@ -8,6 +8,7 @@
 - **图片上传**：上传图片到微信素材库
 - **草稿创建**：创建微信公众号图文草稿
 - **远程代理**：通过 HTTP 接口代理微信 API 调用
+- **多appid支持**：支持配置多个微信公众号应用
 
 ## 安装
 
@@ -31,10 +32,12 @@ export WECHAT_SECRET=your_secret
 **或配置文件**（按优先级从高到低）：
 
 ```
-./wechat-studio.yaml
-~/.wechat-studio.yaml
-~/.config/wechat-studio/config.yaml
+./wechat-proxy.yaml
+~/.wechat-proxy.yaml
+~/.config/wechat-proxy/config.yaml
 ```
+
+**单appid配置：**
 
 ```yaml
 wechat:
@@ -42,7 +45,46 @@ wechat:
   secret: your_secret
 ```
 
+**多appid配置：**
+
+```yaml
+wechat:
+  apps:
+    default:
+      appid: your_default_appid
+      secret: your_default_secret
+    app2:
+      appid: your_second_appid
+      secret: your_second_secret
+```
+
 ## 使用
+
+接口请求支持通过请求体参数 `appid` 指定使用的 appid 配置，默认值为 `default`。
+
+示例：获取 Access Token
+```bash
+curl -X POST http://localhost:8080/api/access-token \
+  -H 'Content-Type: application/json' \
+  -H 'X-Proxy-Secret: your-proxy-secret' \
+  -d '{"appid":"app2"}'
+```
+
+示例：创建草稿
+```bash
+curl -X POST http://localhost:8080/api/create-draft \
+  -H 'Content-Type: application/json' \
+  -H 'X-Proxy-Secret: your-proxy-secret' \
+  -d '{"appid":"app2","label":"图文草稿","articles":[{...}]}'
+```
+
+示例：上传图片素材
+```bash
+curl -X POST http://localhost:8080/api/upload-material \
+  -H 'X-Proxy-Secret: your-proxy-secret' \
+  -F 'appid=app2' \
+  -F 'media=@/path/to/image.jpg'
+```
 
 详见 [SKILL.md](./SKILL.md)。
 
@@ -59,13 +101,13 @@ npm run build:proxy-server:sea
 ```
 
 构建输出：
-- `dist/wechat-studio-proxy`（Linux/macOS）
-- `dist/wechat-studio-proxy.exe`（Windows）
+- `dist/wechat-proxy`（Linux/macOS）
+- `dist/wechat-proxy.exe`（Windows）
 
 运行方式：
 
 ```bash
-./dist/wechat-studio-proxy --port 8080 --secret your-proxy-secret
+./dist/wechat-proxy --port 8080 --secret your-proxy-secret
 ```
 
 仓库内置了 GitHub Actions 工作流 [build-proxy-server-sea.yml](./.github/workflows/build-proxy-server-sea.yml)，可在 GitHub 上生成以下平台的 artifact：

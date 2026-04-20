@@ -3,7 +3,7 @@
  * create-draft.mjs - 创建微信图文草稿
  *
  * 用法:
- *   node scripts/create-draft.mjs <json_file>
+ *   node scripts/create-draft.mjs <json_file> [--app <app_name>]
  *
  * JSON 格式:
  *   {
@@ -18,14 +18,15 @@
  */
 
 import fs from 'node:fs'
+import { getArg } from '../lib/args.mjs'
 import { loadConfig } from '../lib/config.mjs'
 import { createDraft } from '../lib/wechat.mjs'
 
-const args = process.argv.slice(2)
+const rawArgs = process.argv.slice(2)
 
-if (!args.length || args[0] === '--help' || args[0] === '-h') {
+if (!rawArgs.length || rawArgs[0] === '--help' || rawArgs[0] === '-h') {
   process.stdout.write(`
-用法: node scripts/create-draft.mjs <json_file>
+用法: node scripts/create-draft.mjs <json_file> [--app <app_name>]
 
 从 JSON 文件创建微信图文草稿。
 
@@ -42,19 +43,26 @@ JSON 格式:
     }]
   }
 
+选项:
+  --app <app_name>  指定应用名称（默认为 'default'）
+
 输出 JSON:
   { "success": true, "media_id": "草稿 media_id" }
 
 需要配置:
   WECHAT_APP_ID / WECHAT_SECRET 环境变量
-  或 ~/.config/wechat-studio/config.yaml
+  或 ~/.config/wechat-proxy/config.yaml
 `)
   process.exit(0)
 }
 
-const jsonFile = args[0]
+const appName = getArg(rawArgs, ['--app', '-a']) || 'default'
+const jsonFile = rawArgs.filter(a => !a.startsWith('--'))[0]
 
 try {
+  if (!jsonFile) {
+    throw new Error('请指定 JSON 文件')
+  }
   if (!fs.existsSync(jsonFile)) {
     throw new Error(`文件不存在: ${jsonFile}`)
   }
@@ -72,7 +80,7 @@ try {
   }
 
   const cfg = loadConfig('strict')
-  const result = await createDraft(cfg, raw.articles)
+  const result = await createDraft(cfg, raw.articles, '图文草稿', appName)
 
   process.stdout.write(JSON.stringify({
     success: true,

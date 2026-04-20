@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '..')
 const outDir = path.join(projectRoot, 'dist')
 const bundlePath = path.join(outDir, 'proxy-server.bundle.cjs')
-const exeName = process.platform === 'win32' ? 'wechat-studio-proxy.exe' : 'wechat-studio-proxy'
+const exeName = process.platform === 'win32' ? 'wechat-proxy.exe' : 'wechat-proxy'
 const outputPath = path.join(outDir, exeName)
 
 const [major] = process.versions.node.split('.').map(Number)
@@ -23,7 +23,7 @@ execFileSync(process.execPath, [path.join(projectRoot, 'scripts', 'build-proxy-s
   stdio: 'inherit',
 })
 
-const seaConfigPath = path.join(os.tmpdir(), `wechat-studio-sea-${process.pid}.json`)
+const seaConfigPath = path.join(os.tmpdir(), `wechat-proxy-sea-${process.pid}.json`)
 const seaConfig = {
   main: bundlePath,
   output: outputPath,

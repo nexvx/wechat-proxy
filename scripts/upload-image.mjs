@@ -31,7 +31,7 @@ JSON 文件格式:
   [{ "file": "...", "success": true, "media_id": "...", "wechat_url": "..." }, ...]
 需要配置:
   WECHAT_APP_ID / WECHAT_SECRET 环境变量
-  或 ~/.config/wechat-studio/config.yaml
+  或 ~/.config/wechat-proxy/config.yaml
 `)
   process.exit(0)
 }

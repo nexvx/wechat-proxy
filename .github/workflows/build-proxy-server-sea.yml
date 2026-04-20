@@ -19,16 +19,16 @@ jobs:
         target:
           - name: linux-x64
             runner: ubuntu-24.04
-            artifact_name: wechat-studio-proxy-linux-x64
-            binary_name: wechat-studio-proxy
+            artifact_name: wechat-proxy-linux-x64
+            binary_name: wechat-proxy
           - name: macos-arm64
             runner: macos-15
-            artifact_name: wechat-studio-proxy-macos-arm64
-            binary_name: wechat-studio-proxy
+            artifact_name: wechat-proxy-macos-arm64
+            binary_name: wechat-proxy
           - name: windows-x64
             runner: windows-2022
-            artifact_name: wechat-studio-proxy-windows-x64
-            binary_name: wechat-studio-proxy.exe
+            artifact_name: wechat-proxy-windows-x64
+            binary_name: wechat-proxy.exe
 
     steps:
       - name: Checkout
@@ -80,9 +80,9 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p dist
-          cp release-assets/wechat-studio-proxy-linux-x64/wechat-studio-proxy dist/wechat-studio-proxy-linux-x64
-          cp release-assets/wechat-studio-proxy-macos-arm64/wechat-studio-proxy dist/wechat-studio-proxy-macos-arm64
-          cp release-assets/wechat-studio-proxy-windows-x64/wechat-studio-proxy.exe dist/wechat-studio-proxy-windows-x64.exe
+          cp release-assets/wechat-proxy-linux-x64/wechat-proxy dist/wechat-proxy-linux-x64
+          cp release-assets/wechat-proxy-macos-arm64/wechat-proxy dist/wechat-proxy-macos-arm64
+          cp release-assets/wechat-proxy-windows-x64/wechat-proxy.exe dist/wechat-proxy-windows-x64.exe
 
       - name: Generate changelog
         id: changelog
@@ -104,9 +104,9 @@ jobs:
             echo ""
             echo "| Platform | File |"
             echo "|----------|------|"
-            echo "| Linux x64 | \`wechat-studio-proxy-linux-x64\` |"
-            echo "| macOS arm64 | \`wechat-studio-proxy-macos-arm64\` |"
-            echo "| Windows x64 | \`wechat-studio-proxy-windows-x64.exe\` |"
+            echo "| Linux x64 | \`wechat-proxy-linux-x64\` |"
+            echo "| macOS arm64 | \`wechat-proxy-macos-arm64\` |"
+            echo "| Windows x64 | \`wechat-proxy-windows-x64.exe\` |"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -117,6 +117,6 @@ jobs:
           name: ${{ github.ref_name }}
           body: ${{ steps.changelog.outputs.body }}
           files: |
-            dist/wechat-studio-proxy-linux-x64
-            dist/wechat-studio-proxy-macos-arm64
-            dist/wechat-studio-proxy-windows-x64.exe
+            dist/wechat-proxy-linux-x64
+            dist/wechat-proxy-macos-arm64
+            dist/wechat-proxy-windows-x64.exe

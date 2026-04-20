@@ -72,8 +72,8 @@ function collectBody(req) {
 }
 
 /**
- * 从 multipart/form-data 中提取文件
- * 返回临时文件路径（调用方负责清理）
+ * 从 multipart/form-data 中提取文件和 appName
+ * 返回 { tmpPath, appName }
  */
 function parseMultipartFile(body, contentType) {
   const boundaryMatch = contentType.match(/boundary=(.+?)(?:;|$)/)
@@ -81,31 +81,54 @@ function parseMultipartFile(body, contentType) {
 
   const boundary = boundaryMatch[1]
   const boundaryBuf = Buffer.from(`--${boundary}`)
+  let appName = 'default'
 
-  // 查找第一个 boundary 后的 header 和 body
-  const start = body.indexOf(boundaryBuf)
-  if (start === -1) throw new Error('无效的 multipart 数据')
+  // 查找所有 parts
+  let start = 0
+  let filePath = null
 
-  const headerEnd = body.indexOf('\r\n\r\n', start)
-  if (headerEnd === -1) throw new Error('无效的 multipart header')
+  while (true) {
+    const partStart = body.indexOf(boundaryBuf, start)
+    if (partStart === -1) break
 
-  const headerStr = body.slice(start + boundaryBuf.length + 2, headerEnd).toString('utf-8')
+    const partEnd = body.indexOf(boundaryBuf, partStart + boundaryBuf.length)
+    const endPos = partEnd !== -1 ? partEnd : body.length
 
-  // 提取文件名
-  const filenameMatch = headerStr.match(/filename="(.+?)"/)
-  const filename = filenameMatch ? filenameMatch[1] : 'upload.bin'
-  const ext = path.extname(filename) || '.bin'
+    const partBody = body.slice(partStart + boundaryBuf.length + 2, endPos - 2)
+    const headerEnd = partBody.indexOf('\r\n\r\n')
+    if (headerEnd === -1) {
+      start = endPos
+      continue
+    }
 
-  // 提取文件内容（header 结束到下一个 boundary 之间）
-  const fileStart = headerEnd + 4
-  const endBoundary = Buffer.from(`\r\n--${boundary}`)
-  const fileEnd = body.indexOf(endBoundary, fileStart)
-  const fileData = fileEnd !== -1 ? body.slice(fileStart, fileEnd) : body.slice(fileStart)
+    const headerStr = partBody.slice(0, headerEnd).toString('utf-8')
+    const content = partBody.slice(headerEnd + 4)
 
-  // 写入临时文件
-  const tmpPath = path.join(os.tmpdir(), `wechat-proxy-${crypto.randomBytes(8).toString('hex')}${ext}`)
-  fs.writeFileSync(tmpPath, fileData)
-  return tmpPath
+    // 检查字段名
+    const nameMatch = headerStr.match(/name="(.+?)"/)
+    if (nameMatch) {
+      const fieldName = nameMatch[1]
+      if (fieldName === 'appid' || fieldName === 'appId' || fieldName === 'appName') {
+        appName = content.toString('utf-8').trim()
+      } else if (fieldName === 'media' && !filePath) {
+        // 提取文件
+        const filenameMatch = headerStr.match(/filename="(.+?)"/)
+        const filename = filenameMatch ? filenameMatch[1] : 'upload.bin'
+        const ext = path.extname(filename) || '.bin'
+
+        // 写入临时文件
+        filePath = path.join(os.tmpdir(), `wechat-proxy-${crypto.randomBytes(8).toString('hex')}${ext}`)
+        fs.writeFileSync(filePath, content)
+      }
+    }
+
+    start = endPos
+    if (partEnd === -1) break
+  }
+
+  if (!filePath) throw new Error('未找到文件字段')
+
+  return { tmpPath: filePath, appName }
 }
 
 /**
@@ -121,8 +144,10 @@ function sendJson(res, statusCode, data) {
 /**
  * POST /api/access-token
  */
-async function handleAccessToken(cfg, res) {
-  const token = await getAccessToken(cfg)
+async function handleAccessToken(cfg, req, res) {
+  const body = await collectBody(req)
+  const { appid, appName } = JSON.parse(body.toString('utf-8'))
+  const token = await getAccessToken(cfg, appid || appName)
   sendJson(res, 200, { access_token: token })
 }
 
@@ -138,10 +163,10 @@ async function handleUploadMaterial(cfg, req, res) {
   }
 
   const body = await collectBody(req)
-  const tmpPath = parseMultipartFile(body, contentType)
+  const { tmpPath, appName } = parseMultipartFile(body, contentType)
 
   try {
-    const result = await uploadMaterial(cfg, tmpPath)
+    const result = await uploadMaterial(cfg, tmpPath, appName)
     sendJson(res, 200, { media_id: result.mediaId, url: result.wechatUrl })
   } finally {
     // 清理临时文件
@@ -151,18 +176,18 @@ async function handleUploadMaterial(cfg, req, res) {
 
 /**
  * POST /api/create-draft
- * 接收 JSON { articles, label }
+ * 接收 JSON { articles, label, appid }
  */
 async function handleCreateDraft(cfg, req, res) {
   const body = await collectBody(req)
-  const { articles, label } = JSON.parse(body.toString('utf-8'))
+  const { articles, label, appid, appName } = JSON.parse(body.toString('utf-8'))
 
   if (!articles || !Array.isArray(articles)) {
     sendJson(res, 400, { error: 'articles 必须为数组' })
     return
   }
 
-  const result = await createDraft(cfg, articles, label || '图文草稿')
+  const result = await createDraft(cfg, articles, label || '图文草稿', appid || appName)
   sendJson(res, 200, { media_id: result.mediaId })
 }
 

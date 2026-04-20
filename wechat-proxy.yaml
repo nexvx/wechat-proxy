@@ -1,0 +1,17 @@
+# 微信公众号配置示例
+# 支持多个appid配置，每个app有独立的名称
+
+wechat:
+  apps:
+    default:
+      appid: "your_default_appid"
+      secret: "your_default_secret"
+    app2:
+      appid: "your_second_appid"
+      secret: "your_second_secret"
+
+# 其他配置
+compress_images: true
+max_image_width: 1920
+max_image_size: 5242880  # 5MB
+http_timeout: 30
